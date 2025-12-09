@@ -20,7 +20,19 @@ public func configure(_ app: Application) async throws {
         database: Environment.get("DATABASE_NAME") ?? "SecretSanta"
     ), as: .mysql)
 
-    app.migrations.add(CreateTodo())
+    // register routes
+    
+    app.migrations.add(CreateUser())
+    app.migrations.add(CreateEvent())
+    app.migrations.add(UpdateEvent())
+    app.migrations.add(CreateParticipant())
+    app.migrations.add(UpdateParticipant())
+    app.migrations.add(CreateLetter())
+    app.migrations.add(UpdateLetter())
+    app.migrations.add(CreateTirage())
+    app.migrations.add(UpdateTirage())
+    app.migrations.add(UpdateTirageEvent())
+    try await app.autoMigrate()
     
     //Test rapide de connexion
     if let sql = app.db(.mysql) as? (any SQLDatabase) {
@@ -30,7 +42,6 @@ public func configure(_ app: Application) async throws {
     } else {
         print("⚠️ Le driver SQL n'est pas disponible (cast vers SQLDatabase impossible)")
     }
-
-    // register routes
+    
     try routes(app)
 }
