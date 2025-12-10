@@ -19,6 +19,9 @@ struct EventController: RouteCollection {
         protectedRoutes.group(":id") { eventId in
             eventId.get(use: getEventById)
             eventId.delete(use: deleteEventById)
+            eventId.group("draw", ":participantId") { group in
+                group.get(use: getDrawForParticipant)
+            }
         }
     }
     
@@ -96,6 +99,7 @@ struct EventController: RouteCollection {
         )
     }
 
+    //POST/event
     @Sendable
     func createEvent(_ req: Request) async throws -> EventDTO {
         let payload = try req.auth.require(UserPayload.self)
@@ -195,6 +199,38 @@ struct EventController: RouteCollection {
         }
 
         return result
+    }
+    
+    // GET /event/:eventId/draw/:participantId
+    @Sendable
+    func getDrawForParticipant(_ req: Request) async throws -> DrawResultDTO {
+        
+        guard let eventId = req.parameters.get("eventId", as: UUID.self),
+              let participantId = req.parameters.get("participantId", as: UUID.self)
+        else {
+            throw Abort(.badRequest)
+        }
+
+        // vérifier que le participant existe
+        guard let participant = try await Participant.find(participantId, on: req.db) else {
+            throw Abort(.notFound, reason: "Participant introuvable")
+        }
+
+        // récupérer son tirage
+        guard let tirage = try await Tirage.query(on: req.db)
+            .filter(\.$event.$id == eventId)
+            .filter(\.$giver.$id == participantId)
+            .with(\.$receiver)
+            .first()
+        else {
+            throw Abort(.notFound, reason: "Aucun tirage trouvé pour ce participant")
+        }
+        
+        return DrawResultDTO(
+            giverId:  try participant.requireID(),
+            receiverId: tirage.$receiver.id,
+            receiverName: tirage.receiver.name
+        )
     }
     
     // DELETE /event/:id
