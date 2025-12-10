@@ -19,7 +19,7 @@ final class Event : Model, Content, @unchecked Sendable {
     @Field(key: "lieu") var lieu: String
     @Field(key: "prixCadeau") var prixCadeau: Int
     @Field(key: "codeEvent") var codeEvent: String
-    @Parent(key: "creator_Id") var user: User
+    @Parent(key: "creator_Id") var creator: User
     @Children(for : \.$event) var participants: [Participant]
     @Children(for : \.$event) var tirages: [Tirage]
     
@@ -37,7 +37,6 @@ final class Event : Model, Content, @unchecked Sendable {
         self.lieu = lieu
         self.prixCadeau = prixCadeau
         self.codeEvent = codeEvent
-        self.$user.id = creator_Id
-        
+        self.$creator.id = creator_Id
     }
 }
