@@ -135,6 +135,26 @@ struct EventController: RouteCollection {
         //TIRAGE AU SORT
         let tirage = try await generateTirage(event: newEvent, participants: participantList, db: req.db)
         
+        // ENVOI DES EMAILS
+        for participant in participantList {
+            let html = """
+            <h2>🎁 Invitation Secret Santa</h2>
+            <p>Bonjour <strong>\(participant.name)</strong>,</p>
+            <p>Tu as été invité à participer au Secret Santa :</p>
+            <p><strong>\(newEvent.nom)</strong></p>
+            <p>Voici ton code pour rejoindre l’évènement :</p>
+            <h3 style="color:#d40000;">\(newEvent.codeEvent)</h3>
+            <p>🎄 Télécharge l'application et entre ce code pour participer.</p>
+            """
+
+            try await BrevoEmailService.sendEmail(
+                req: req,
+                to: participant.email,
+                subject: "🎅 Invitation au Secret Santa : \(newEvent.nom)",
+                html: html
+            )
+        }
+        
         return EventDTO(
             id: try newEvent.requireID(),
             nom: newEvent.nom,
@@ -209,3 +229,4 @@ extension String {
         return String((0..<length).map { _ in chars.randomElement()! })
     }
 }
+

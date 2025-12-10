@@ -18,7 +18,7 @@ struct ParticipantController: RouteCollection {
 
     // POST /participant/join
     @Sendable
-    func joinEvent(_ req: Request) async throws -> HTTPStatus {
+    func joinEvent(_ req: Request) async throws -> ParticipantJoinResponse {
         let payload = try req.auth.require(UserPayload.self)
         let userId = payload.id
 
@@ -51,6 +51,7 @@ struct ParticipantController: RouteCollection {
         participant.$user.id = userId
         try await participant.save(on: req.db)
 
-        return .ok
+        return ParticipantJoinResponse(participantId: try participant.requireID(),
+                                       eventId: try event.requireID())
     }
 }

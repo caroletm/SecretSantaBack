@@ -27,6 +27,11 @@ struct ParticipantJoinDTO : Content {
     var codeEvent: String
 }
 
+struct ParticipantJoinResponse: Content {
+    let participantId: UUID
+    let eventId: UUID
+}
+
 extension ParticipantCreateDTO {
     func validate(on req: Request) throws {
         

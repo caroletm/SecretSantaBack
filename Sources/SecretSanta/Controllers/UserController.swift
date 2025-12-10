@@ -11,8 +11,20 @@ import JWT
 
 struct UserController : RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
-        //        let users = routes.grouped("users")
-        
+        let users = routes.grouped("users")
+
+          users.get(use: getAllUsers)
+          users.post(use: createUser)
+
+          users.post("login", use: login)
+
+          let protected = users.grouped(JWTMiddleware())
+          protected.get("profile", use: profile)
+
+          users.group(":id") { user in
+              user.get(use: getUserById)
+              user.delete(use: deleteUserById)
+          }
     }
     
     //GET/users
