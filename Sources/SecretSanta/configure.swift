@@ -7,6 +7,8 @@ import JWT
 import FluentSQLiteDriver
 import FluentSQL
 
+
+
 // configures your application
 public func configure(_ app: Application) async throws {
     // uncomment to serve files from /Public folder
@@ -19,6 +21,11 @@ public func configure(_ app: Application) async throws {
         password: Environment.get("DATABASE_PASSWORD") ?? "",
         database: Environment.get("DATABASE_NAME") ?? "SecretSanta"
     ), as: .mysql)
+    
+    
+    let brevoAPIKey = Environment.get("BREVO_API_KEY") ?? ""
+    app.storage[BrevoAPIKey.self] = brevoAPIKey
+    app.logger.info("Loaded BREVO_API_KEY: \(Environment.get("BREVO_API_KEY") ?? "nil")")
 
     // register routes
     
@@ -33,6 +40,8 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(UpdateTirage())
     app.migrations.add(UpdateTirageEvent())
     try await app.autoMigrate()
+    
+
     
     //Test rapide de connexion
     if let sql = app.db(.mysql) as? (any SQLDatabase) {
