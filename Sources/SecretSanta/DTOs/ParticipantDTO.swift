@@ -47,9 +47,9 @@ extension ParticipantCreateDTO {
             throw Abort(.badRequest, reason: "L'email du participant n'est pas valide.")
         }
         
-        // --- Téléphone : uniquement chiffres + 10 à 15 caractères ---
+        // --- Téléphone : uniquement chiffres + 8 à 15 caractères ---
         let phoneRegex = #"^[0-9]{8,15}$"#
-        let isValidPhone = email.range(of: phoneRegex, options: .regularExpression) != nil
+        let isValidPhone = telephone.range(of: phoneRegex, options: .regularExpression) != nil
         
         guard isValidPhone else {
             throw Abort(.badRequest, reason: "Le numéro de téléphone doit contenir uniquement des chiffres (8 à 15).")

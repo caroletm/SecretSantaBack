@@ -12,3 +12,9 @@ struct TirageDTO: Content {
     var giverId: UUID
     var receiverId: UUID
 }
+
+struct DrawResultDTO: Content {
+    let giverId: UUID
+    let receiverId: UUID
+    let receiverName: String
+}

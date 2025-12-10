@@ -25,7 +25,6 @@ public func configure(_ app: Application) async throws {
     
     let brevoAPIKey = Environment.get("BREVO_API_KEY") ?? ""
     app.storage[BrevoAPIKey.self] = brevoAPIKey
-    app.logger.info("Loaded BREVO_API_KEY: \(Environment.get("BREVO_API_KEY") ?? "nil")")
 
     // register routes
     
