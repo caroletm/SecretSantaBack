@@ -17,7 +17,7 @@ final class Participant : Model, Content, @unchecked Sendable {
     @Field(key: "telephone") var telephone: String
     
     @OptionalParent(key: "user_id") var user: User?
-    @Parent(key: "event_Id") var event: Event
+    @Parent(key: "event_id") var event: Event
     
     @Children(for: \.$giver) var tiragesAsGiver: [Tirage]
     @Children(for: \.$receiver) var tiragesAsReceiver: [Tirage]
@@ -25,9 +25,7 @@ final class Participant : Model, Content, @unchecked Sendable {
     @Children(for: \.$expediteur) var lettersSent: [Letter]
     @Children(for: \.$destinataire) var lettersReceived: [Letter]
 
-    init() {
-        self.id = UUID()
-    }
+    init() {}
     
     init(id: UUID? = nil, name: String, email: String, telephone: String, event_Id : Event.IDValue) {
         self.id = id ?? UUID()

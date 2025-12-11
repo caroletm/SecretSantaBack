@@ -19,8 +19,10 @@ struct EventController: RouteCollection {
         protectedRoutes.group(":id") { eventId in
             eventId.get(use: getEventById)
             eventId.delete(use: deleteEventById)
-            eventId.group("draw", ":participantId") { group in
-                group.get(use: getDrawForParticipant)
+            
+            // /event/:id/draw
+            eventId.group("draw") { group in
+                group.get(use: getDrawForUser)   // GET /event/:id/draw
             }
         }
     }
@@ -29,31 +31,49 @@ struct EventController: RouteCollection {
     //Récupère tous les events du user (filtré par son token)
     @Sendable
     func getAllEvents(_ req: Request) async throws -> [EventDTO] {
-        
+
         let payload = try req.auth.require(UserPayload.self)
         let userId = payload.id
-        
-        let event = try await Event.query(on: req.db)
+
+        // Récupérer les events créés par l'utilisateur
+        let createdEvents = try await Event.query(on: req.db)
             .filter(\.$creator.$id == userId)
             .with(\.$participants)
             .with(\.$tirages)
             .all()
-        
-        return event.map { EventDTO(
-            id: $0.id,
-            nom: $0.nom,
-            description: $0.description,
-            image: $0.image,
-            date: $0.date,
-            lieu: $0.lieu,
-            prixCadeau: $0.prixCadeau,
-            codeEvent: $0.codeEvent,
-            creatorId: userId,
-            participants: $0.participants.map { p in
-                ParticipantDTO(id: p.id, name: p.name, email: p.email, telephone: p.telephone)},
-            tirages: $0.tirages.map {TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)}
-        )}
+
+        // Récupérer les events où il est inscrit comme participant
+        let participantEvents = try await Event.query(on: req.db)
+            .join(Participant.self, on: \Participant.$event.$id == \Event.$id)
+            .filter(Participant.self, \.$user.$id == userId)   // user est participant
+            .with(\.$participants)
+            .with(\.$tirages)
+            .all()
+
+        // Fusionner sans doublons
+        let all = uniqueEvents(createdEvents + participantEvents)
+
+        return all.map { event in
+            EventDTO(
+                id: event.id,
+                nom: event.nom,
+                description: event.description,
+                image: event.image,
+                date: event.date,
+                lieu: event.lieu,
+                prixCadeau: event.prixCadeau,
+                codeEvent: event.codeEvent,
+                creatorId: event.$creator.id,
+                participants: event.participants.map {
+                    ParticipantDTO(id: $0.id, name: $0.name, email: $0.email, telephone: $0.telephone)
+                },
+                tirages: event.tirages.map {
+                    TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)
+                }
+            )
+        }
     }
+    
     
     //GET/event/id:
     //Récupère toutes les events du user (filtré par son token) filtré par l'ID de l'event
@@ -105,6 +125,12 @@ struct EventController: RouteCollection {
         let payload = try req.auth.require(UserPayload.self)
         let userId = payload.id
         
+        // 👉 Récupérer l'utilisateur pour obtenir son email
+          guard let user = try await User.find(userId, on: req.db) else {
+              throw Abort(.notFound, reason: "Utilisateur introuvable")
+          }
+          let creatorEmail = user.email.lowercased()
+        
         let dto = try req.content.decode(EventCreateDTO.self)
         try dto.validate(on: req)
         let codeEvent = String.randomSecretCode()
@@ -132,6 +158,12 @@ struct EventController: RouteCollection {
         for p in dto.participants {
             let participant = Participant(
                 name: p.name, email: p.email, telephone: p.telephone, event_Id: try newEvent.requireID())
+            
+            // 👉 si email du participant == celui du créateur
+                  if p.email.lowercased() == creatorEmail {
+                      participant.$user.id = userId
+                  }
+            
             try await participant.save(on: req.db)
             participantList.append(participant)
         }
@@ -173,6 +205,8 @@ struct EventController: RouteCollection {
             tirages: tirage.map {TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)})
     }
     
+    
+    
     // MARK: - SECRET SANTA LOGIC
     private func generateTirage(event: Event, participants: [Participant], db: any Database) async throws -> [Tirage] {
         
@@ -201,33 +235,37 @@ struct EventController: RouteCollection {
         return result
     }
     
-    // GET /event/:eventId/draw/:participantId
-    @Sendable
-    func getDrawForParticipant(_ req: Request) async throws -> DrawResultDTO {
+    // GET /event/:eventId/draw/
+    func getDrawForUser(_ req: Request) async throws -> DrawResultDTO {
         
-        guard let eventId = req.parameters.get("eventId", as: UUID.self),
-              let participantId = req.parameters.get("participantId", as: UUID.self)
+        let payload = try req.auth.require(UserPayload.self)
+        let userId = payload.id
+        
+        guard let eventId = req.parameters.get("id", as: UUID.self) else {
+            throw Abort(.badRequest, reason: "eventId manquant")
+        }
+        
+        // 1. Trouver le participant lié à ce user dans cet event
+        guard let participant = try await Participant.query(on: req.db)
+            .filter(\.$user.$id == userId)
+            .filter(\.$event.$id == eventId)
+            .first()
         else {
-            throw Abort(.badRequest)
+            throw Abort(.notFound, reason: "Aucun participant lié à ce user dans cet event")
         }
 
-        // vérifier que le participant existe
-        guard let participant = try await Participant.find(participantId, on: req.db) else {
-            throw Abort(.notFound, reason: "Participant introuvable")
-        }
-
-        // récupérer son tirage
+        // 2. Trouver son tirage (giverId)
         guard let tirage = try await Tirage.query(on: req.db)
             .filter(\.$event.$id == eventId)
-            .filter(\.$giver.$id == participantId)
+            .filter(\.$giver.$id == participant.requireID())
             .with(\.$receiver)
             .first()
         else {
             throw Abort(.notFound, reason: "Aucun tirage trouvé pour ce participant")
         }
-        
+
         return DrawResultDTO(
-            giverId:  try participant.requireID(),
+            giverId: try participant.requireID(),
             receiverId: tirage.$receiver.id,
             receiverName: tirage.receiver.name
         )
@@ -266,3 +304,15 @@ extension String {
     }
 }
 
+func uniqueEvents(_ events: [Event]) -> [Event] {
+    var seen = Set<UUID>()
+    var result: [Event] = []
+
+    for e in events {
+        if let id = e.id, !seen.contains(id) {
+            seen.insert(id)
+            result.append(e)
+        }
+    }
+    return result
+}

@@ -53,7 +53,8 @@ struct BrevoEmailService {
 
         let response = try await req.client.send(clientRequest)
 
-        guard response.status.code == 202 else {
+        // Succès = n'importe quel 2xx
+        guard (200..<300).contains(response.status.code) else {
             let errorBody = response.body?.string ?? "<aucun message>"
             throw Abort(.badRequest, reason: "Brevo error → \(errorBody)")
         }
