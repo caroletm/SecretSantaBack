@@ -19,7 +19,6 @@ struct CreateLetter: AsyncMigration {
             .id()
             .field("message", .string, .required)
             .field("signature", .string, .required)
-            .field("email", .string, .required)
             .field("typeLetter", typeLetter, .required)
             .field("date", .datetime)
             .create()

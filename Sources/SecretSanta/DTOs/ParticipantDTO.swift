@@ -22,7 +22,6 @@ struct ParticipantDTO: Content {
 }
 
 struct ParticipantJoinDTO : Content {
-    var participantId: UUID
     var email: String
     var codeEvent: String
 }

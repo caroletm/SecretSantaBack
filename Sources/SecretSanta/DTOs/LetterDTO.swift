@@ -12,8 +12,7 @@ struct LetterCreateDTO: Content {
     var message: String
     var signature: String
     var typeLetter: TypeLetter
-    var expediteurId: UUID
-    var destinataireId: UUID
+    var eventId: UUID
 }
 
 struct LetterDTO: Content {

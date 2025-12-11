@@ -17,12 +17,11 @@ struct ParticipantController: RouteCollection {
     }
 
     // POST /participant/join
-    @Sendable
     func joinEvent(_ req: Request) async throws -> ParticipantJoinResponse {
         let payload = try req.auth.require(UserPayload.self)
         let userId = payload.id
 
-        let dto = try req.content.decode(ParticipantJoinDTO.self)
+        let dto = try req.content.decode(ParticipantJoinDTO.self)   // juste code + email
 
         // Trouver l’event via code
         guard let event = try await Event.query(on: req.db)
@@ -32,14 +31,13 @@ struct ParticipantController: RouteCollection {
             throw Abort(.notFound, reason: "Aucun événement avec ce code.")
         }
 
-        //  Trouver le participant
+        // Trouver le participant avec cet email
         guard let participant = try await Participant.query(on: req.db)
-            .filter(\.$id == dto.participantId)
-            .filter(\.$email == dto.email)
             .filter(\.$event.$id == event.id!)
+            .filter(\.$email == dto.email)
             .first()
         else {
-            throw Abort(.notFound, reason: "Participant non trouvé pour cet event.")
+            throw Abort(.notFound, reason: "Aucun participant avec cet email dans cet event.")
         }
 
         // Vérifier s’il est déjà lié
@@ -47,11 +45,12 @@ struct ParticipantController: RouteCollection {
             throw Abort(.badRequest, reason: "Ce participant a déjà un compte associé.")
         }
 
-        // Associer l'utilisateur au participant
+        // Associer l'utilisateur
         participant.$user.id = userId
         try await participant.save(on: req.db)
 
-        return ParticipantJoinResponse(participantId: try participant.requireID(),
-                                       eventId: try event.requireID())
-    }
-}
+        return ParticipantJoinResponse(
+            participantId: try participant.requireID(),
+            eventId: try event.requireID()
+        )
+    }}
