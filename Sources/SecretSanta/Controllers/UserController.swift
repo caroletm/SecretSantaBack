@@ -118,7 +118,13 @@ struct UserController : RouteCollection {
         }
         
         let payload = UserPayload(id: user.id!)
-        let signer = JWTSigner.hs256(key: "LOUVRE123")
+        
+        guard let secret = Environment.get("JWT_SECRET") else {
+            fatalError("JWT_SECRET manquant")
+        }
+
+        let signer = JWTSigner.hs256(key: secret)
+        
         let token = try signer.sign(payload)
         return LoginResponse(token:token)
     }

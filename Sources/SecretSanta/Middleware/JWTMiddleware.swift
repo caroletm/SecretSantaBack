@@ -14,7 +14,12 @@ final class JWTMiddleware: Middleware {
         guard let token = request.headers["Authorization"].first?.split(separator: " ").last else {
             return request.eventLoop.future(error: Abort(.unauthorized, reason: "Token manquant"))
         }
-        let signer = JWTSigner.hs256(key: "LOUVRE123")
+        
+        guard let secret = Environment.get("JWT_SECRET") else {
+            fatalError("JWT_SECRET manquant")
+        }
+
+        let signer = JWTSigner.hs256(key: secret)
         let payload : UserPayload
         
         do {
