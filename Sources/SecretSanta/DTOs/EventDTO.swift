@@ -53,6 +53,10 @@ extension EventCreateDTO {
             throw Abort(.badRequest, reason: "La description de l'évènement est obligatoire.")
         }
         
+        guard !lieu.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw Abort(.badRequest, reason: "Le lieu de l'évènement est obligatoire.")
+        }
+        
         guard date > Date() else {
             throw Abort(.badRequest, reason: "La date de l'évènement doit être dans le futur.")
         }

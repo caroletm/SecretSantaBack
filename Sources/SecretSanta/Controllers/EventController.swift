@@ -174,13 +174,13 @@ struct EventController: RouteCollection {
         // ENVOI DES EMAILS
         for participant in participantList {
             let html = """
-            <h2>🎁 Invitation Secret Santa</h2>
+            <h2>🎁 Invitation Secret Santa\n</h2>
             <p>Bonjour <strong>\(participant.name)</strong>,</p>
-            <p>Tu as été invité à participer au Secret Santa :</p>
+            <p>Tu as été invité.e à participer au Secret Santa :</p>
             <p><strong>\(newEvent.nom)</strong></p>
             <p>Voici ton code pour rejoindre l’évènement :</p>
             <h3 style="color:#d40000;">\(newEvent.codeEvent)</h3>
-            <p>🎄 Télécharge l'application et entre ce code pour participer.</p>
+            <p>🎄 Installe l'application avec cette adresse mail et entre ce code pour participer.</p>
             """
 
             try await BrevoEmailService.sendEmail(
@@ -207,27 +207,25 @@ struct EventController: RouteCollection {
     
     
     
-    // MARK: - SECRET SANTA LOGIC
+    // MARK: - SECRET SANTA TIRAGE LOGIC
     private func generateTirage(event: Event, participants: [Participant], db: any Database) async throws -> [Tirage] {
-        
-        var shuffled = participants.shuffled()
-        var result: [Tirage] = []
-        
-        for (index, p) in participants.enumerated() {
-            var drawn = shuffled[index]
-            
-            if drawn.id == p.id {
-                let next = (index + 1) % participants.count
-                shuffled.swapAt(index, next)
-                drawn = shuffled[index]
-            }
 
+        var receivers = participants
+
+        // On mélange jusqu'à obtenir un tirage valide
+        repeat {
+            receivers.shuffle()
+        } while zip(participants, receivers).contains(where: { $0.id == $1.id })
+
+        // Maintenant on a une permutation valide sans doublons et sans self-match
+        var result: [Tirage] = []
+
+        for (giver, receiver) in zip(participants, receivers) {
             let t = Tirage(
                 event_Id: try event.requireID(),
-                giver_Id: try p.requireID(),
-                receiver_Id: try drawn.requireID()
+                giver_Id: try giver.requireID(),
+                receiver_Id: try receiver.requireID()
             )
-            
             try await t.save(on: db)
             result.append(t)
         }

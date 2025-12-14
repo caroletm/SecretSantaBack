@@ -28,8 +28,8 @@ struct BrevoEmailService {
         // Corps JSON manuel (plus sûr que encode pour ton cas)
         let payload: [String: Any] = [
             "sender": [
-                "name": "MySecretSanta",
-                "email": "caroletrem94@hotmail.com"
+                "name": "My Secret Santa",
+                "email": "mysecretsanta.noreply@gmail.com"
             ],
             "to": [
                 ["email": email]
