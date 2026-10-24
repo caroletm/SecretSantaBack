@@ -181,6 +181,20 @@ struct EventController: RouteCollection {
             <p>Voici ton code pour rejoindre l’évènement :</p>
             <h3 style="color:#d40000;">\(newEvent.codeEvent)</h3>
             <p>🎄 Installe l'application avec cette adresse mail et entre ce code pour participer.</p>
+            
+            <p>
+            <a href="https://apps.apple.com/app/my-secret-santa/id6756591171"
+               style="display:inline-block;
+                      padding:12px 18px;
+                      background-color:#d40000;
+                      color:white;
+                      text-decoration:none;
+                      border-radius:6px;
+                      font-weight:bold;">
+            📲 Télécharger l’app sur l’App Store
+            </a>
+            </p>
+            
             """
 
             try await BrevoEmailService.sendEmail(
