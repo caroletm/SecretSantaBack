@@ -54,13 +54,9 @@ public func configure(_ app: Application) async throws {
 //        print("⚠️ Le driver SQL n'est pas disponible (cast vers SQLDatabase impossible)")
 //    }
     
-    enum JWTConfig {
-        static func signer() -> JWTSigner {
-            guard let secret = Environment.get("JWT_SECRET") else {
-                fatalError("JWT_SECRET is not set")
-            }
-            return JWTSigner.hs256(key: secret)
-        }
+    // Un secret court permet de fabriquer de faux tokens : on refuse de démarrer plutôt que de tourner avec
+    guard let jwtSecret = Environment.get("JWT_SECRET"), jwtSecret.count >= 32 else {
+        fatalError("JWT_SECRET manquant ou trop court (32 caractères minimum)")
     }
     
     let corsConfiguration = CORSMiddleware.Configuration(

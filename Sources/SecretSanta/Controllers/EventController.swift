@@ -193,12 +193,18 @@ struct EventController: RouteCollection {
             
             """
 
-            try await BrevoEmailService.sendEmail(
-                req: req,
-                to: participant.email,
-                subject: "🎅 Invitation au Secret Santa : \(newEvent.nom)",
-                html: html
-            )
+            // L'event et le tirage sont déjà en base : un email raté ne doit pas faire échouer la création
+            // (sinon l'utilisateur réessaie et crée un event en double). Le détail va dans les logs.
+            do {
+                try await BrevoEmailService.sendEmail(
+                    req: req,
+                    to: participant.email,
+                    subject: "🎅 Invitation au Secret Santa : \(newEvent.nom)",
+                    html: html
+                )
+            } catch {
+                req.logger.error("Email d'invitation non envoyé (event \(newEvent.id?.uuidString ?? "?")) : \(error)")
+            }
         }
         
         return EventDTO(
