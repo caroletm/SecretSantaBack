@@ -13,45 +13,12 @@ struct UserController : RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let users = routes.grouped("users")
 
-          users.get(use: getAllUsers)
-          users.post(use: createUser)
+        users.post(use: createUser)
+        users.post("login", use: login)
 
-          users.post("login", use: login)
-
-          let protected = users.grouped(JWTMiddleware())
-          protected.get("profile", use: profile)
-
-          users.group(":id") { user in
-              user.get(use: getUserById)
-              user.delete(use: deleteUserById)
-          }
-    }
-    
-    //GET/users
-    // Récupère tous les utilisateurs enregistrés.
-    // Accessible sans authentification.
-    // Retour : [UserDTO]
-    @Sendable
-    func getAllUsers(_ req: Request) async throws -> [UserDTO] {
-        let users = try await User.query(on: req.db).all()
-        return users.map { user in
-            UserDTO(
-                id: user.id,
-                name : user.name,
-                email: user.email,
-                telephone: user.telephone
-            )
-        }
-    }
-    
-    //GET/:id
-    //Recupere un user par son ID
-    @Sendable
-    func getUserById(_ req: Request) async throws -> User {
-        guard let user = try await User.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.notFound)
-        }
-        return user
+        let protected = users.grouped(JWTMiddleware())
+        protected.get("profile", use: profile)
+        protected.delete("me", use: deleteMe)
     }
     
     // POST /users
@@ -147,18 +114,18 @@ struct UserController : RouteCollection {
             telephone: user.telephone
         )
     }
-    
-    // DELETE /users/:id
-    // Supprime un utilisateur via son ID.
-    // Actuellement non protégé → à sécuriser plus tard.
+    // DELETE /users/me
+    // Protégé par JWT
+    // Supprime le compte de l'utilisateur connecté.
     //
     // Retour : 204 No Content
     @Sendable
-    func deleteUserById(_ req: Request) async throws -> Response {
-        guard let user = try await User.find(req.parameters.get("id"), on: req.db) else {
-            throw Abort(.badRequest, reason: "Id invalide")
+    func deleteMe(_ req: Request) async throws -> HTTPStatus {
+        let payload = try req.auth.require(UserPayload.self)
+        guard let user = try await User.find(payload.id, on: req.db) else {
+            throw Abort(.notFound)
         }
         try await user.delete(on: req.db)
-        return Response(status: .noContent)
+        return .noContent
     }
 }
