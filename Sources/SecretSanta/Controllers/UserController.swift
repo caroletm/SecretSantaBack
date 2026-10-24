@@ -29,21 +29,22 @@ struct UserController : RouteCollection {
     @Sendable
     func createUser(_ req: Request) async throws -> UserDTO {
         let dto = try req.content.decode(UserCreateDTO.self)
-        
+        let email = dto.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
         if try await User.query(on: req.db)
-            .filter(\.$email == dto.email)
+            .filter(\.$email == email)
             .first() != nil {
             throw Abort(.badRequest, reason: "Un utilisateur avec cet email existe déjà")
         }
-        
-        if dto.password.count < 6 {
-            throw Abort(.badRequest, reason: "Le mot de passe doit contenir au moins 6 caractères.")
+
+        if dto.password.count < 8 {
+            throw Abort(.badRequest, reason: "Le mot de passe doit contenir au moins 8 caractères.")
         }
         let passwordHashed = try Bcrypt.hash(dto.password)
-        
+
         let user = User(
             name: dto.name,
-            email: dto.email,
+            email: email,
             password: passwordHashed,
             telephone: dto.telephone,
         )
@@ -73,15 +74,13 @@ struct UserController : RouteCollection {
     @Sendable
     func login(req: Request) async throws -> LoginResponse {
         let userData = try req.content.decode(LoginRequest.self)
-        
+        let email = userData.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
         guard let user = try await User.query(on: req.db)
-            .filter(\.$email == userData.email)
-            .first() else {
-            throw Abort(.unauthorized, reason: "Email incorrect")
-        }
-        
-        guard try Bcrypt.verify(userData.password, created: user.password) else {
-            throw Abort(.unauthorized, reason: "Mot de passe incorrect")
+            .filter(\.$email == email)
+            .first(),
+              try Bcrypt.verify(userData.password, created: user.password) else {
+            throw Abort(.unauthorized, reason: "Email ou mot de passe incorrect")
         }
         
         let payload = UserPayload(id: user.id!)
