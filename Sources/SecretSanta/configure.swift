@@ -64,7 +64,7 @@ public func configure(_ app: Application) async throws {
     }
     
     let corsConfiguration = CORSMiddleware.Configuration(
-        allowedOrigin: .all,
+        allowedOrigin: .custom("https://mysecretsanta.cloud"),
         allowedMethods: [.GET, .POST, .PUT, .DELETE, .OPTIONS],
         allowedHeaders: [.accept, .authorization, .contentType, .origin],
         cacheExpiration: 800
