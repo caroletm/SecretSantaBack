@@ -9,7 +9,7 @@ import Vapor
 import Fluent
 
 final class Tirage : Model, Content, @unchecked Sendable {
-    static let schema = "Tirage"
+    static let schema = "tirage"
     
     @ID(key: .id) var id : UUID?
     @Parent(key: "event_Id") var event: Event

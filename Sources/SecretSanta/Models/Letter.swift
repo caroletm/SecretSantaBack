@@ -9,7 +9,7 @@ import Vapor
 import Fluent
 
 final class Letter : Model, Content, @unchecked Sendable {
-    static let schema = "Letter"
+    static let schema = "letter"
     
     @ID(key: .id) var id : UUID?
     @Field(key: "message") var message: String

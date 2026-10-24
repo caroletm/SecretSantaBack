@@ -10,11 +10,11 @@ import Fluent
 struct CreateTirage: AsyncMigration {
     func prepare(on db: any Database) async throws {
 
-        try await db.schema("Tirage")
+        try await db.schema("tirage")
             .id()
             .create()
     }
     func revert(on db: any Database) async throws {
-        try await db.schema("Tirage").delete()
+        try await db.schema("tirage").delete()
     }
 }

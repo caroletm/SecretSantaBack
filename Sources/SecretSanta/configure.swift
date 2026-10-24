@@ -41,6 +41,9 @@ public func configure(_ app: Application) async throws {
     app.migrations.add(CreateTirage())
     app.migrations.add(UpdateTirage())
     app.migrations.add(UpdateTirageEvent())
+    app.migrations.add(UpdateEventDescriptionToText())
+    app.migrations.add(UpdateLetterMessageToText())
+    app.migrations.add(UpdateLetterCascade())
 //    try await app.autoMigrate()
     
 

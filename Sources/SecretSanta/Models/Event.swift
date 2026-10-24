@@ -9,7 +9,7 @@ import Vapor
 import Fluent
 
 final class Event : Model, Content, @unchecked Sendable {
-    static let schema = "Event"
+    static let schema = "event"
     
     @ID(key: .id) var id : UUID?
     @Field(key: "nom") var nom: String

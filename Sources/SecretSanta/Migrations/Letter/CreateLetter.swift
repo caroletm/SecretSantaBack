@@ -15,7 +15,7 @@ struct CreateLetter: AsyncMigration {
             .case("fromFriendToUser")
             .create()
         
-        try await db.schema("Letter")
+        try await db.schema("letter")
             .id()
             .field("message", .string, .required)
             .field("signature", .string, .required)
@@ -24,7 +24,7 @@ struct CreateLetter: AsyncMigration {
             .create()
     }
     func revert(on db: any Database) async throws {
-        try await db.schema("Letter").delete()
+        try await db.schema("letter").delete()
         try await db.enum("typeLetter").delete()
     }
 }
