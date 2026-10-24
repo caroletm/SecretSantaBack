@@ -217,7 +217,7 @@ struct EventController: RouteCollection {
             prixCadeau: newEvent.prixCadeau,
             codeEvent: newEvent.codeEvent,
             creatorId: userId,
-            participants: participantList.map {ParticipantDTO(id: $0.id!, name: $0.name, email: $0.email, telephone: $0.telephone)},
+            participants: participantList.map {ParticipantDTO(id: $0.id, name: $0.name, email: $0.email, telephone: $0.telephone)},
             tirages: tiragesForUser(participants: participantList, tirages: tirage, userId: userId))
     }
 

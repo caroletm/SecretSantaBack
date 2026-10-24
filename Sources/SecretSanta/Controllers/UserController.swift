@@ -83,7 +83,7 @@ struct UserController : RouteCollection {
             throw Abort(.unauthorized, reason: "Email ou mot de passe incorrect")
         }
         
-        let payload = UserPayload(id: user.id!)
+        let payload = UserPayload(id: try user.requireID())
         
         guard let secret = Environment.get("JWT_SECRET") else {
             fatalError("JWT_SECRET manquant")

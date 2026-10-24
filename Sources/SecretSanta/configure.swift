@@ -14,19 +14,33 @@ public func configure(_ app: Application) async throws {
     // uncomment to serve files from /Public folder
     // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
+    guard let databaseHost = Environment.get("DATABASE_HOST"),
+          let databaseUsername = Environment.get("DATABASE_USERNAME"),
+          let databasePassword = Environment.get("DATABASE_PASSWORD"),
+          let databaseName = Environment.get("DATABASE_NAME") else {
+        fatalError("Variables manquantes : DATABASE_HOST, DATABASE_USERNAME, DATABASE_PASSWORD et DATABASE_NAME sont obligatoires")
+    }
+
+    // MySQL tourne dans Docker sur la même machine avec un certificat auto-signé : on chiffre sans vérifier le certificat (comme CleanQuest)
+    var tlsConfiguration = TLSConfiguration.makeClientConfiguration()
+    tlsConfiguration.certificateVerification = .none
+
     app.databases.use(
         .mysql(
-            hostname: Environment.get("DATABASE_HOST")!,
+            hostname: databaseHost,
             port: Environment.get("DATABASE_PORT").flatMap(Int.init) ?? 3306,
-            username: Environment.get("DATABASE_USERNAME")!,
-            password: Environment.get("DATABASE_PASSWORD")!,
-            database: Environment.get("DATABASE_NAME")!,
-            tlsConfiguration: .makeClientConfiguration()
+            username: databaseUsername,
+            password: databasePassword,
+            database: databaseName,
+            tlsConfiguration: tlsConfiguration
         ),
         as: .mysql
     )
-    
+
     let brevoAPIKey = Environment.get("BREVO_API_KEY") ?? ""
+    if brevoAPIKey.isEmpty {
+        app.logger.warning("BREVO_API_KEY manquante : les emails d'invitation ne partiront pas")
+    }
     app.storage[BrevoAPIKey.self] = brevoAPIKey
 
     // register routes
