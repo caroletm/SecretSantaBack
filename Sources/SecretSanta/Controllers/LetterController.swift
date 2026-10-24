@@ -11,37 +11,12 @@ import Fluent
 struct LetterController: RouteCollection {
     func boot(routes: any RoutesBuilder) throws {
         let letter = routes.grouped("letter")
-        letter.get("all", use: getAllLettersForAdmin)
         let protectedRoutes = letter.grouped(JWTMiddleware())
-        
+
         protectedRoutes.post(use: createLetter)
         protectedRoutes.get(use: getAllLetters)
-        
-        protectedRoutes.group(":id") { letter in
-            letter.delete(use: deleteLetter)
-        }
     }
-    
-    //GET/letter/all
-    @Sendable
-    func getAllLettersForAdmin(_ req: Request) async throws -> [LetterDTO] {
-        // Récupérer toutes les lettres dont il est le destinataire
-        let letters = try await Letter.query(on: req.db)
-            .all()
 
-        return letters.map { letter in
-            LetterDTO(
-                id: letter.id,
-                message: letter.message,
-                signature: letter.signature,
-                typeLetter: letter.typeLetter,
-                date: letter.date,
-                expediteur: letter.$expediteur.id,
-                destinataire: letter.$destinataire.id
-            )
-        }
-    }
-    
     //GET/letter
     //Récupère tous les letters du user (filtré par son token)
     @Sendable
@@ -191,19 +166,6 @@ struct LetterController: RouteCollection {
         )
     }
 
-    
-//    DELETE /letter/:id
-    @Sendable
-    func deleteLetter(_ req: Request) async throws -> HTTPStatus {
-        guard let id = req.parameters.get("id", as: UUID.self),
-              let letter = try await Letter.find(id, on: req.db)
-        else {
-            throw Abort(.notFound)
-        }
 
-        try await letter.delete(on: req.db)
-        return .noContent
-    }
-    
 }
 
