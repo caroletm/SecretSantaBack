@@ -67,9 +67,7 @@ struct EventController: RouteCollection {
                 participants: event.participants.map {
                     ParticipantDTO(id: $0.id, name: $0.name, email: $0.email, telephone: $0.telephone)
                 },
-                tirages: event.tirages.map {
-                    TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)
-                }
+                tirages: tiragesForUser(participants: event.participants, tirages: event.tirages, userId: userId)
             )
         }
     }
@@ -113,9 +111,7 @@ struct EventController: RouteCollection {
                     telephone: participant.telephone
                 )
             },
-            tirages: event.tirages.map {
-                TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)
-            }
+            tirages: tiragesForUser(participants: event.participants, tirages: event.tirages, userId: userId)
         )
     }
 
@@ -133,6 +129,9 @@ struct EventController: RouteCollection {
         
         let dto = try req.content.decode(EventCreateDTO.self)
         try dto.validate(on: req)
+        for participantDTO in dto.participants {
+            try participantDTO.validate(on: req)
+        }
         let codeEvent = String.randomSecretCode()
         
         //CREATION DE L EVENT
@@ -150,17 +149,14 @@ struct EventController: RouteCollection {
         
         //CREATION DES PARTICIPANTS
         var participantList : [Participant] = []
-        
-        for participantDTO in dto.participants {
-            try participantDTO.validate(on: req)
-        }
-        
+
         for p in dto.participants {
+            let email = p.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             let participant = Participant(
-                name: p.name, email: p.email, telephone: p.telephone, event_Id: try newEvent.requireID())
-            
+                name: p.name, email: email, telephone: p.telephone, event_Id: try newEvent.requireID())
+
             // 👉 si email du participant == celui du créateur
-                  if p.email.lowercased() == creatorEmail {
+                  if email == creatorEmail {
                       participant.$user.id = userId
                   }
             
@@ -175,9 +171,9 @@ struct EventController: RouteCollection {
         for participant in participantList {
             let html = """
             <h2>🎁 Invitation Secret Santa\n</h2>
-            <p>Bonjour <strong>\(participant.name)</strong>,</p>
+            <p>Bonjour <strong>\(participant.name.htmlEscaped)</strong>,</p>
             <p>Tu as été invité.e à participer au Secret Santa :</p>
-            <p><strong>\(newEvent.nom)</strong></p>
+            <p><strong>\(newEvent.nom.htmlEscaped)</strong></p>
             <p>Voici ton code pour rejoindre l’évènement :</p>
             <h3 style="color:#d40000;">\(newEvent.codeEvent)</h3>
             <p>🎄 Installe l'application avec cette adresse mail et entre ce code pour participer.</p>
@@ -216,25 +212,32 @@ struct EventController: RouteCollection {
             codeEvent: newEvent.codeEvent,
             creatorId: userId,
             participants: participantList.map {ParticipantDTO(id: $0.id!, name: $0.name, email: $0.email, telephone: $0.telephone)},
-            tirages: tirage.map {TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id)})
+            tirages: tiragesForUser(participants: participantList, tirages: tirage, userId: userId))
     }
-    
+
+    // Ne renvoie que la ligne du tirage de l'utilisateur connecté : personne ne doit voir le tirage complet
+    private func tiragesForUser(participants: [Participant], tirages: [Tirage], userId: UUID) -> [TirageDTO] {
+        let myParticipantIds = participants
+            .filter { $0.$user.id == userId }
+            .compactMap { $0.id }
+
+        return tirages
+            .filter { myParticipantIds.contains($0.$giver.id) }
+            .map { TirageDTO(giverId: $0.$giver.id, receiverId: $0.$receiver.id) }
+    }
+
     
     
     // MARK: - SECRET SANTA TIRAGE LOGIC
     private func generateTirage(event: Event, participants: [Participant], db: any Database) async throws -> [Tirage] {
 
-        var receivers = participants
-
-        // On mélange jusqu'à obtenir un tirage valide
-        repeat {
-            receivers.shuffle()
-        } while zip(participants, receivers).contains(where: { $0.id == $1.id })
-
-        // Maintenant on a une permutation valide sans doublons et sans self-match
+        // On mélange une fois, puis chacun offre au suivant et le dernier au premier :
+        // un seul grand cercle, donc personne ne se tire lui-même et pas de paires croisées (A → B et B → A)
+        let shuffled = participants.shuffled()
         var result: [Tirage] = []
 
-        for (giver, receiver) in zip(participants, receivers) {
+        for (index, giver) in shuffled.enumerated() {
+            let receiver = shuffled[(index + 1) % shuffled.count]
             let t = Tirage(
                 event_Id: try event.requireID(),
                 giver_Id: try giver.requireID(),
@@ -313,6 +316,16 @@ extension String {
     static func randomSecretCode(length: Int = 6) -> String {
         let chars = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
         return String((0..<length).map { _ in chars.randomElement()! })
+    }
+
+    // Empêche d'injecter du HTML (faux liens) dans les emails
+    var htmlEscaped: String {
+        self
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+            .replacingOccurrences(of: "\"", with: "&quot;")
+            .replacingOccurrences(of: "'", with: "&#39;")
     }
 }
 

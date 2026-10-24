@@ -68,5 +68,15 @@ extension EventCreateDTO {
         guard !image.isEmpty else {
             throw Abort(.badRequest, reason: "Une image d'évènement est obligatoire.")
         }
+
+        // Le tirage en cercle a besoin d'au moins 3 personnes (à 1 on se tire soi-même, à 2 c'est forcément une paire croisée)
+        guard participants.count >= 3, participants.count <= 30 else {
+            throw Abort(.badRequest, reason: "Un évènement doit avoir entre 3 et 30 participants.")
+        }
+
+        let emails = participants.map { $0.email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+        guard Set(emails).count == emails.count else {
+            throw Abort(.badRequest, reason: "Chaque participant doit avoir un email différent.")
+        }
     }
 }
