@@ -14,6 +14,11 @@ public func configure(_ app: Application) async throws {
     // uncomment to serve files from /Public folder
     // app.middleware.use(FileMiddleware(publicDirectory: app.directory.publicDirectory))
 
+    #if DEBUG
+    // En local, on écoute sur tout le réseau Wi-Fi pour que l'iPhone puisse joindre le Mac (en prod, c'est le Dockerfile qui le règle)
+    app.http.server.configuration.hostname = "0.0.0.0"
+    #endif
+
     guard let databaseHost = Environment.get("DATABASE_HOST"),
           let databaseUsername = Environment.get("DATABASE_USERNAME"),
           let databasePassword = Environment.get("DATABASE_PASSWORD"),
